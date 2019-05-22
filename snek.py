@@ -13,7 +13,7 @@ WHITE = [255, 255, 255]
 RED = [255, 0, 0]
 GREEN = [0, 255, 0]
 BUTTONS = []
-WEIGHT_DIM = (29, 15, 9, 3)
+WEIGHT_DIM = (25, 15, 9, 3)
 NUM_SURVIVE = 20
 
 def init_game():
@@ -211,7 +211,7 @@ def run_super_snake(screen, snakes, game_board):
     pygame.draw.rect(screen, RED, game_board[apple_rect])
 
     while True:
-        check_snakes = np.random.choice(snakes, size=3)
+        check_snakes = np.random.choice(snakes, size=5)
         # print(check_snakes)
         count = [0, 0, 0]
         for idx in range(len(check_snakes)):

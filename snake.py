@@ -8,6 +8,7 @@ WHITE = [255, 255, 255]
 RED = [255, 0, 0]
 GREEN = [0, 255, 0]
 EATEN_NUM = 2
+ORDER_DIR = [('None', 'Up'), ('Left', 'Up'), ('Left', 'None'), ('Left', 'Down'), ('None', 'Down'), ('Right', 'Down'), ('Right', 'None'), ('Right', 'Up')]
 
 class Snake():
     def __init__(self, screen=None, screen_lock=None, game_board=None, weights=None):
@@ -52,193 +53,85 @@ class Snake():
             # print('Body')
             return 1
 
-        if next_rect[0] < 0 or next_rect[1] < 0 or next_rect[0] >= 35 or next_rect[1] >= 30 or next_rect in self.body:
+        if next_rect[0] < 0 or next_rect[1] < 0 or next_rect[0] >= 35 or next_rect[1] >= 30:
             return -1
+
+        if next_rect in self.body:
+            return -2
 
         return 0
 
+    def view_direction(self, h_direction='None', v_direction='None'):
+        x_change = 0
+        y_change = 0
+        if v_direction == 'Up':
+            y_change = -1
+        elif v_direction == 'Down':
+            y_change = 1
+
+        if h_direction == 'Left':
+            x_change = -1
+        elif h_direction == 'Right':
+            x_change = 1
+
+        current_pos = self.body[-1]
+        current_pos = (current_pos[0] + x_change, current_pos[1] + y_change)
+
+        out = [0 for _ in range(3)]
+        dist = 1
+        while True:
+            if self.check_bounds(current_pos) == 1 and not out[1]:
+                out[0] = 1
+
+            if self.check_bounds(current_pos) == -2 and not out[1]:
+                out[1] = 1 / dist
+
+            if self.check_bounds(current_pos) == -1:
+                out[2] = 1 / dist
+                return out
+
+            dist += 1
+            current_pos = (current_pos[0] + x_change, current_pos[1] + y_change)
+
     def create_input_vector(self):
         # [Front?, Left?, Right?, Angle-Norm, Distance]
-        input_vec = [0 for _ in range(29)]
+        input_vec = [0 for _ in range(25)]
         angle = (self.apple[0] - self.body[-1][0], self.apple[1] - self.body[-1][1])
         angle = (math.atan2(angle[0], angle[1]) + 2 * math.pi) % (2 * math.pi)
+        order_idx = 0
         if self.direction == 'Up':
-            # 3 in front
-            input_vec[0] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 1)) # Up
-            input_vec[1] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 2)) # Up
-            input_vec[2] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 3)) # Up
-
-            # 3 in left front
-            input_vec[3] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] - 1)) # Left Up
-            input_vec[4] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] - 2)) # Left Up
-            input_vec[5] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] - 3)) # Left Up
-
-            # 3 in left
-            input_vec[6] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1])) # Left
-            input_vec[7] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1])) # Left
-            input_vec[8] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1])) # Left
-
-            # 3 in left back
-            input_vec[9] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] + 1)) # Left Down
-            input_vec[10] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] + 2)) # Left Down
-            input_vec[11] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] + 3)) # Left Down
-
-            # 3 in back
-            input_vec[12] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 1)) # Down
-            input_vec[13] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 2)) # Down
-            input_vec[14] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 3)) # Down
-
-            # 3 in back right
-            input_vec[15] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] + 1)) # Right Down
-            input_vec[16] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] + 2)) # Right Down
-            input_vec[17] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] + 3)) # Right Down
-
-            # 3 in right
-            input_vec[18] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1])) # Right
-            input_vec[19] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1])) # Right
-            input_vec[20] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1])) # Right
-
-            # 3 in right front
-            input_vec[21] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] - 1)) # Right Up
-            input_vec[22] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] - 2)) # Right Up
-            input_vec[23] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] - 3)) # Right Up
-
+            order_idx = 0
             angle -= math.pi
+
         elif self.direction == 'Left':
-            # 3 in left
-            input_vec[0] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1])) # Left
-            input_vec[1] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1])) # Left
-            input_vec[2] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1])) # Left
-
-            # 3 in left back
-            input_vec[3] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] + 1)) # Left Down
-            input_vec[4] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] + 2)) # Left Down
-            input_vec[5] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] + 3)) # Left Down
-
-            # 3 in back
-            input_vec[6] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 1)) # Down
-            input_vec[7] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 2)) # Down
-            input_vec[8] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 3)) # Down
-
-            # 3 in back right
-            input_vec[9] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] + 1)) # Right Down
-            input_vec[10] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] + 2)) # Right Down
-            input_vec[11] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] + 3)) # Right Down
-
-            # 3 in right
-            input_vec[12] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1])) # Right
-            input_vec[13] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1])) # Right
-            input_vec[14] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1])) # Right
-
-            # 3 in right front
-            input_vec[15] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] - 1)) # Right Up
-            input_vec[16] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] - 2)) # Right Up
-            input_vec[17] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] - 3)) # Right Up
-
-            # 3 in front
-            input_vec[18] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 1)) # Up
-            input_vec[19] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 2)) # Up
-            input_vec[20] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 3)) # Up
-
-            # 3 in left front
-            input_vec[21] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] - 1)) # Left Up
-            input_vec[22] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] - 2)) # Left Up
-            input_vec[23] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] - 3)) # Left Up
-
+            order_idx = 2
             angle -= 3 * math.pi / 2
+
         elif self.direction == 'Right':
-            # 3 in right
-            input_vec[0] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1])) # Right
-            input_vec[1] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1])) # Right
-            input_vec[2] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1])) # Right
-
-            # 3 in right front
-            input_vec[3] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] - 1)) # Right Up
-            input_vec[4] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] - 2)) # Right Up
-            input_vec[5] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] - 3)) # Right Up
-
-            # 3 in front
-            input_vec[6] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 1)) # Up
-            input_vec[7] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 2)) # Up
-            input_vec[8] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 3)) # Up
-
-            # 3 in left front
-            input_vec[9] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] - 1)) # Left Up
-            input_vec[10] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] - 2)) # Left Up
-            input_vec[11] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] - 3)) # Left Up
-
-            # 3 in left
-            input_vec[12] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1])) # Left
-            input_vec[13] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1])) # Left
-            input_vec[14] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1])) # Left
-
-            # 3 in left back
-            input_vec[15] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] + 1)) # Left Down
-            input_vec[16] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] + 2)) # Left Down
-            input_vec[17] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] + 3)) # Left Down
-
-            # 3 in back
-            input_vec[18] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 1)) # Down
-            input_vec[19] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 2)) # Down
-            input_vec[20] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 3)) # Down
-
-            # 3 in back right
-            input_vec[21] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] + 1)) # Right Down
-            input_vec[22] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] + 2)) # Right Down
-            input_vec[23] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] + 3)) # Right Down
-
+            order_idx = 6
             angle -= math.pi / 2
+
         elif self.direction == 'Down':
-            # 3 in back
-            input_vec[0] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 1)) # Down
-            input_vec[1] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 2)) # Down
-            input_vec[2] = self.check_bounds((self.body[-1][0], self.body[-1][1] + 3)) # Down
-
-            # 3 in back right
-            input_vec[3] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] + 1)) # Right Down
-            input_vec[4] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] + 2)) # Right Down
-            input_vec[5] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] + 3)) # Right Down
-
-            # 3 in right
-            input_vec[6] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1])) # Right
-            input_vec[7] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1])) # Right
-            input_vec[8] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1])) # Right
-
-            # 3 in right front
-            input_vec[9] = self.check_bounds((self.body[-1][0] + 1, self.body[-1][1] - 1)) # Right Up
-            input_vec[10] = self.check_bounds((self.body[-1][0] + 2, self.body[-1][1] - 2)) # Right Up
-            input_vec[11] = self.check_bounds((self.body[-1][0] + 3, self.body[-1][1] - 3)) # Right Up
-
-            # 3 in front
-            input_vec[12] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 1)) # Up
-            input_vec[13] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 2)) # Up
-            input_vec[14] = self.check_bounds((self.body[-1][0], self.body[-1][1] - 3)) # Up
-
-            # 3 in left front
-            input_vec[15] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] - 1)) # Left Up
-            input_vec[16] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] - 2)) # Left Up
-            input_vec[17] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] - 3)) # Left Up
-
-            # 3 in left
-            input_vec[18] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1])) # Left
-            input_vec[19] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1])) # Left
-            input_vec[20] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1])) # Left
-
-            # 3 in left back
-            input_vec[21] = self.check_bounds((self.body[-1][0] - 1, self.body[-1][1] + 1)) # Left Down
-            input_vec[22] = self.check_bounds((self.body[-1][0] - 2, self.body[-1][1] + 2)) # Left Down
-            input_vec[23] = self.check_bounds((self.body[-1][0] - 3, self.body[-1][1] + 3)) # Left Down
+            order_idx = 4
 
         if angle < 0:
             angle += 2 * math.pi
 
-        input_vec[24] = self.body[-1][0] / 35
-        input_vec[25] = self.body[-1][1] / 30
+        for i in range(8):
+            input_vec[i * 3], input_vec[i * 3 + 1], input_vec[i * 3 + 2] = self.view_direction(ORDER_DIR[order_idx][0], ORDER_DIR[order_idx][1])
+            order_idx += 1
+            order_idx %= 8
 
-        input_vec[26] = (self.apple[0] - self.body[-1][0]) / 35
-        input_vec[27] = (self.apple[1] - self.body[-1][1]) / 30
+        # print(input_vec)
+        # import pdb; pdb.set_trace()
 
-        input_vec[28] = angle / (2 * math.pi)
+        # input_vec[24] = self.body[-1][0] / 35
+        # input_vec[25] = self.body[-1][1] / 30
+
+        # input_vec[26] = (self.apple[0] - self.body[-1][0]) / 35
+        # input_vec[27] = (self.apple[1] - self.body[-1][1]) / 30
+
+        input_vec[24] = angle / (2 * math.pi)
 
         return input_vec
 
@@ -371,7 +264,7 @@ class Snake():
             if next_rect == self.apple:
                 # print("ATE", num)
                 eaten = True
-                timeout += 100 * ((len(self.body) - 1) // (EATEN_NUM + 1))
+                timeout += 200
                 self.apple = self.find_new_apple(non_used)
                 # self.score += 50000
 
